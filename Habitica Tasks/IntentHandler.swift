@@ -5,8 +5,23 @@
 //  Created by Christopher Coffin on 3/10/19.
 //  Copyright © 2019 HabitRPG Inc. All rights reserved.
 //
+/* Sample intents
+ Add the following under Siri intent query:
+
+ Add Task
+Add get grocieries to my todo list in Habitica
+
+Show Tasks in a given list
+Show my todo list in Habitica
+*/
 
 import Intents
+import Foundation
+import Habitica_Models
+import Habitica_Database
+import ReactiveSwift
+import RealmSwift
+import Result
 
 
 class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessagesIntentHandling, INSetMessageAttributeIntentHandling, INAddTasksIntentHandling, INSearchForNotebookItemsIntentHandling, INCreateTaskListIntentHandling, INSetTaskAttributeIntentHandling {
@@ -32,14 +47,16 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
         }
         return tasks
     }
-
+    
     // handle for reading the list of task in todo
     func handle(intent: INSearchForNotebookItemsIntent, completion: @escaping (INSearchForNotebookItemsIntentResponse) -> Void) {
 
         let userActivity = NSUserActivity(activityType: NSStringFromClass(INSearchForNotebookItemsIntent.self))
+        //let response = INSearchForNotebookItemsIntentResponse(code: .inProgress, userActivity: userActivity)
         let response = INSearchForNotebookItemsIntentResponse(code: .success, userActivity: userActivity)
         // Initialize with found message's attributes
-        response.tasks = [INTask(
+        /*
+         response.tasks = [INTask(
             title: INSpeakableString(spokenPhrase: String("Hardcoded test")),
             status: .notCompleted,
             taskType: .completable,
@@ -48,20 +65,22 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
             createdDateComponents: nil,
             modifiedDateComponents: nil,
             identifier: nil)]
-        let taskTitles = ListManager.sharedInstance.tasksForList(withName: "todo")
-        for taskTitle in taskTitles {
-            response.tasks?.append(INTask(
-                title: INSpeakableString(spokenPhrase: taskTitle),
-                status: .notCompleted,
-                taskType: .completable,
-                spatialEventTrigger: nil,
-                temporalEventTrigger: nil,
-                createdDateComponents: nil,
-                modifiedDateComponents: nil,
-                identifier: nil))
-        }
-
-        completion(response)
+         */
+        response.tasks = []
+        ListManager.sharedInstance.tasksForList(withName: "todo", oncompletion: {(taskTitles) in
+            for taskTitle in taskTitles {
+                response.tasks?.append(INTask(
+                    title: INSpeakableString(spokenPhrase: taskTitle),
+                    status: .notCompleted,
+                    taskType: .completable,
+                    spatialEventTrigger: nil,
+                    temporalEventTrigger: nil,
+                    createdDateComponents: nil,
+                    modifiedDateComponents: nil,
+                    identifier: nil))
+            }
+            completion(response)
+        })
     }
     
     func handle(intent: INSetTaskAttributeIntent, completion: @escaping (INSetTaskAttributeIntentResponse) -> Void) {
@@ -74,8 +93,6 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
         
         return self
     }
-    
-    // MARK: - INSendMessageIntentHandling
     
     // Implement resolution methods to provide additional information about your intent (optional).
     func resolveRecipients(for intent: INSendMessageIntent, with completion: @escaping ([INSendMessageRecipientResolutionResult]) -> Void) {
@@ -157,12 +174,15 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
                 return taskTitle.spokenPhrase
             }
             tasks = createTasks(fromTitles: taskTitlesStrings)
-            ListManager.sharedInstance.add(tasks: taskTitlesStrings, toList: title.spokenPhrase)
+            ListManager.sharedInstance.add(tasks: taskTitlesStrings, toList: title.spokenPhrase, oncompletion: {
+                // to require app launch
+                //let response = INAddTasksIntentResponse(code: .failureRequiringAppLaunch, userActivity: nil)
+                let response = INAddTasksIntentResponse(code: .success, userActivity: nil)
+                response.modifiedTaskList = intent.targetTaskList
+                response.addedTasks = tasks
+                completion(response)
+            })
         }
-        let response = INAddTasksIntentResponse(code: .failureRequiringAppLaunch, userActivity: nil)
-        response.modifiedTaskList = intent.targetTaskList
-        response.addedTasks = tasks
-        completion(response)
     }
 
     func handle(intent: INSearchForMessagesIntent, completion: @escaping (INSearchForMessagesIntentResponse) -> Void) {
