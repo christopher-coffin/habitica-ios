@@ -84,6 +84,10 @@ target 'Habitica' do
     inherit! :search_paths
     test_pods
   end
+
+  target 'Habitica Tasks' do
+    inherit! :search_paths
+  end
   
   target 'Habitica Snapshots' do
     inherit! :search_paths
@@ -109,7 +113,6 @@ target "Habitica API Client" do
     test_pods
   end
 end
-
 
 target "Habitica Database" do
   project 'Habitica Database/Habitica Database.xcodeproj'
