@@ -24,30 +24,19 @@ import RealmSwift
 import Result
 
 
-class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessagesIntentHandling, INSetMessageAttributeIntentHandling, INAddTasksIntentHandling, INSearchForNotebookItemsIntentHandling, INCreateTaskListIntentHandling, INSetTaskAttributeIntentHandling {
-
-    // TODO remove this since we don't need to create a task list
-    func handle(intent: INCreateTaskListIntent, completion: @escaping (INCreateTaskListIntentResponse) -> Void) {
+class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessagesIntentHandling, INSetMessageAttributeIntentHandling, INAddTasksIntentHandling, INSearchForNotebookItemsIntentHandling, INSetTaskAttributeIntentHandling {
+  
+    override func handler(for intent: INIntent) -> Any {
+        // This is the default implementation.  If you want different objects to handle different intents,
+        // you can override this and return the handler you want for that particular intent.
+        
+        return self
+    }
+    
+    func handle(intent: INSetTaskAttributeIntent, completion: @escaping (INSetTaskAttributeIntentResponse) -> Void) {
         return
     }
 
-    //Add get groceries to my todo list in Habitica
-    func createTasks(fromTitles taskTitles: [String]) -> [INTask] {
-        var tasks: [INTask] = []
-        tasks = taskTitles.map { taskTitle -> INTask in
-            let task = INTask(title: INSpeakableString(spokenPhrase: taskTitle),
-                              status: .notCompleted,
-                              taskType: .completable,
-                              spatialEventTrigger: nil,
-                              temporalEventTrigger: nil,
-                              createdDateComponents: nil,
-                              modifiedDateComponents: nil,
-                              identifier: nil)
-            return task
-        }
-        return tasks
-    }
-    
     // handle for reading the list of task in todo
     func handle(intent: INSearchForNotebookItemsIntent, completion: @escaping (INSearchForNotebookItemsIntentResponse) -> Void) {
 
@@ -55,17 +44,6 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
         //let response = INSearchForNotebookItemsIntentResponse(code: .inProgress, userActivity: userActivity)
         let response = INSearchForNotebookItemsIntentResponse(code: .success, userActivity: userActivity)
         // Initialize with found message's attributes
-        /*
-         response.tasks = [INTask(
-            title: INSpeakableString(spokenPhrase: String("Hardcoded test")),
-            status: .notCompleted,
-            taskType: .completable,
-            spatialEventTrigger: nil,
-            temporalEventTrigger: nil,
-            createdDateComponents: nil,
-            modifiedDateComponents: nil,
-            identifier: nil)]
-         */
         response.tasks = []
         ListManager.sharedInstance.tasksForList(withName: "todo", oncompletion: {(taskTitles) in
             for taskTitle in taskTitles {
@@ -81,17 +59,6 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
             }
             completion(response)
         })
-    }
-    
-    func handle(intent: INSetTaskAttributeIntent, completion: @escaping (INSetTaskAttributeIntentResponse) -> Void) {
-        return
-    }
-
-    override func handler(for intent: INIntent) -> Any {
-        // This is the default implementation.  If you want different objects to handle different intents,
-        // you can override this and return the handler you want for that particular intent.
-        
-        return self
     }
     
     // Implement resolution methods to provide additional information about your intent (optional).
@@ -138,7 +105,6 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
     }
     
     // Once resolution is completed, perform validation on the intent and provide confirmation (optional).
-    
     func confirm(intent: INSendMessageIntent, completion: @escaping (INSendMessageIntentResponse) -> Void) {
         // Verify user is authenticated and your app is ready to send a message.
         
@@ -148,7 +114,6 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
     }
     
     // Handle the completed intent (required).
-    
     func handle(intent: INSendMessageIntent, completion: @escaping (INSendMessageIntentResponse) -> Void) {
         // Implement your application logic to send a message here.
         
@@ -157,7 +122,23 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
         completion(response)
     }
     
-    
+    //Add get groceries to my todo list in Habitica
+    func createTasks(fromTitles taskTitles: [String]) -> [INTask] {
+     var tasks: [INTask] = []
+     tasks = taskTitles.map { taskTitle -> INTask in
+     let task = INTask(title: INSpeakableString(spokenPhrase: taskTitle),
+     status: .notCompleted,
+     taskType: .completable,
+     spatialEventTrigger: nil,
+     temporalEventTrigger: nil,
+     createdDateComponents: nil,
+     modifiedDateComponents: nil,
+     identifier: nil)
+     return task
+     }
+     return tasks
+     }
+ 
     func handle(intent: INAddTasksIntent, completion: @escaping (INAddTasksIntentResponse) -> Void) {
         let userActivity = NSUserActivity(activityType: NSStringFromClass(INAddTasksIntent.self))
         let taskList = intent.targetTaskList
@@ -174,7 +155,7 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
                 return taskTitle.spokenPhrase
             }
             tasks = createTasks(fromTitles: taskTitlesStrings)
-            ListManager.sharedInstance.add(tasks: taskTitlesStrings, toList: title.spokenPhrase, oncompletion: {
+            ListManager.sharedInstance.add(tasks: taskTitlesStrings, type: title.spokenPhrase, oncompletion: {
                 // to require app launch
                 //let response = INAddTasksIntentResponse(code: .failureRequiringAppLaunch, userActivity: nil)
                 let response = INAddTasksIntentResponse(code: .success, userActivity: nil)
