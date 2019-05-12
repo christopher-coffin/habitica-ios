@@ -3306,7 +3306,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Habitica/Pods-Habitica-frameworks.sh\"\n";
+			shellScript = "\"{SRCROOT}/Pods/Target Support Files/Pods-Habitica/Pods-Habitica-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
 		B2FE1A291D097FDD8A4DD843 /* 📦 Embed Pods Frameworks */ = {
@@ -3348,7 +3348,7 @@
 			files = (
 			);
 			inputPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-HabiticaTests/Pods-HabiticaTests-frameworks.sh",
+				"{SRCROOT}/Pods/Target Support Files/Pods-HabiticaTests/Pods-HabiticaTests-frameworks.sh",
 				"${BUILT_PRODUCTS_DIR}/Nimble/Nimble.framework",
 				"${BUILT_PRODUCTS_DIR}/Quick/Quick.framework",
 				"${BUILT_PRODUCTS_DIR}/iOSSnapshotTestCase/FBSnapshotTestCase.framework",
@@ -3361,7 +3361,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-HabiticaTests/Pods-HabiticaTests-frameworks.sh\"\n";
+			shellScript = "\"{SRCROOT}/Pods/Target Support Files/Pods-HabiticaTests/Pods-HabiticaTests-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
 		D60FCC9C9ED19CF3D2A020D0 /* [CP] Check Pods Manifest.lock */ = {

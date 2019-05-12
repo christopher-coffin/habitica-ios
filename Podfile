@@ -120,6 +120,7 @@ target "Habitica API Client" do
   end
 end
 
+
 target "Habitica Database" do
   project 'Habitica Database/Habitica Database.xcodeproj'
   pod "RealmSwift"
