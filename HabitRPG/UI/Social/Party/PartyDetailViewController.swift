@@ -88,6 +88,11 @@ class PartyDetailViewController: GroupDetailViewController {
         }).start())
     }
     
+    override func applyTheme(theme: Theme) {
+        super.applyTheme(theme: theme)
+        partyChallengesButton.backgroundColor = theme.contentBackgroundColor
+    }
+    
     override func populateText() {
         descriptionTitleView.text = L10n.Party.partyDescription
         membersTitleView.text = L10n.Groups.members
@@ -196,7 +201,7 @@ class PartyDetailViewController: GroupDetailViewController {
         let partyInvitations = user.invitations.filter { (invitation) -> Bool in
             return invitation.isPartyInvitation
         }
-        if partyInvitations.count == 0 {
+        if partyInvitations.isEmpty {
             invitationsListView.isHidden = true
             mainStackviewOffset.constant = 16
         } else {

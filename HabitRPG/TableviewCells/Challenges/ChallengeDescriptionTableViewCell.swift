@@ -26,8 +26,7 @@ class ChallengeDescriptionTableViewCell: ResizableTableViewCell, ChallengeConfig
     
     func configure(with challenge: ChallengeProtocol) {
         if let notes = challenge.notes {
-            descriptionLabel.attributedText = try? Down(markdownString: notes.unicodeEmoji).toHabiticaAttributedString(baseFont: descriptionLabel.font)
-            descriptionLabel.textColor = UIColor.gray10()
+            descriptionLabel.attributedText = try? Down(markdownString: notes.unicodeEmoji).toHabiticaAttributedString(baseSize: descriptionLabel.font.pointSize)
         }
     }
     

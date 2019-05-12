@@ -11,13 +11,12 @@ import Habitica_Models
 import Habitica_Database
 import Habitica_API_Client
 import ReactiveSwift
-import Result
 
 class UserRepository: BaseRepository<UserLocalRepository> {
     
     var taskRepository = TaskRepository()
     
-    func retrieveUser(withTasks: Bool = true) -> Signal<UserProtocol?, NoError> {
+    func retrieveUser(withTasks: Bool = true) -> Signal<UserProtocol?, Never> {
         let call = RetrieveUserCall()
         call.fire()
         let signal = call.objectSignal.on(value: {[weak self] user in
@@ -46,7 +45,7 @@ class UserRepository: BaseRepository<UserLocalRepository> {
         }
     }
     
-    func allocate(attributePoint: String) -> Signal<StatsProtocol?, NoError> {
+    func allocate(attributePoint: String) -> Signal<StatsProtocol?, Never> {
         let call = AllocateAttributePointCall(attribute: attributePoint)
         call.fire()
         return call.objectSignal.on(value: {[weak self] stats in
@@ -56,7 +55,7 @@ class UserRepository: BaseRepository<UserLocalRepository> {
         })
     }
     
-    func bulkAllocate(strength: Int, intelligence: Int, constitution: Int, perception: Int) -> Signal<StatsProtocol?, NoError> {
+    func bulkAllocate(strength: Int, intelligence: Int, constitution: Int, perception: Int) -> Signal<StatsProtocol?, Never> {
         let call = BulkAllocateAttributePointsCall(strength: strength, intelligence: intelligence, constitution: constitution, perception: perception)
         call.fire()
         return call.objectSignal.on(value: {stats in
@@ -74,7 +73,7 @@ class UserRepository: BaseRepository<UserLocalRepository> {
         }
     }
     
-    func useSkill(skill: SkillProtocol, targetId: String? = nil) -> Signal<SkillResponseProtocol?, NoError> {
+    func useSkill(skill: SkillProtocol, targetId: String? = nil) -> Signal<SkillResponseProtocol?, Never> {
         let call = UseSkillCall(skill: skill, target: targetId)
         call.fire()
         return call.objectSignal.on(value: {[weak self] skillResponse in
@@ -87,10 +86,13 @@ class UserRepository: BaseRepository<UserLocalRepository> {
                 rightTextColor: UIColor.blue10(),
                 background: .blue)
                 ToastManager.show(toast: toastView)
+                if #available(iOS 10.0, *) {
+                    UINotificationFeedbackGenerator.oneShotNotificationOccurred(.success)
+                }
             })
     }
     
-    func useTransformationItem(item: SpecialItemProtocol, targetId: String) -> Signal<EmptyResponseProtocol?, NoError> {
+    func useTransformationItem(item: SpecialItemProtocol, targetId: String) -> Signal<EmptyResponseProtocol?, Never> {
         let call = UseTransformationItemCall(item: item, target: targetId)
         call.fire()
         return call.objectSignal.on(value: {[weak self] _ in
@@ -100,24 +102,24 @@ class UserRepository: BaseRepository<UserLocalRepository> {
         })
     }
     
-    func runCron(tasks: [TaskProtocol]) -> Signal<UserProtocol?, NoError> {
+    func runCron(tasks: [TaskProtocol]) -> Signal<UserProtocol?, Never> {
         getUser().take(first: 1).on(value: {[weak self]user in
-            self?.localRepository.updateCall {
+            self?.localRepository.updateCall { _ in
                 user.needsCron = false
             }
         }).start()
-        if tasks.count > 0 {
+        if tasks.isEmpty == false {
             var signal = taskRepository.score(task: tasks[0], direction: .up)
             for task in tasks.dropFirst() {
                 signal = signal.flatMap(.concat, { _ in
                     return self.taskRepository.score(task: task, direction: .up)
                 })
             }
-            return signal.flatMap(.latest, {[weak self] _ -> Signal<EmptyResponseProtocol?, NoError> in
+            return signal.flatMap(.latest, {[weak self] _ -> Signal<EmptyResponseProtocol?, Never> in
                 let call = RunCronCall()
                 call.fire()
                 return call.objectSignal
-            }).flatMap(.latest, {[weak self] _ -> Signal<UserProtocol?, NoError> in
+            }).flatMap(.latest, {[weak self] _ -> Signal<UserProtocol?, Never> in
                 return self?.retrieveUser() ?? Signal.empty
             })
         } else {
@@ -129,23 +131,23 @@ class UserRepository: BaseRepository<UserLocalRepository> {
         }
     }
     
-    func updateUser(_ updateDict: [String: Encodable]) -> Signal<UserProtocol?, NoError> {
+    func updateUser(_ updateDict: [String: Encodable]) -> Signal<UserProtocol?, Never> {
         let call = UpdateUserCall(updateDict)
         call.fire()
         return call.objectSignal.on(value: handleUserUpdate())
     }
     
-    func updateUser(key: String, value: Encodable) -> Signal<UserProtocol?, NoError> {
+    func updateUser(key: String, value: Encodable) -> Signal<UserProtocol?, Never> {
         return updateUser([key: value])
     }
     
-    func updateDayStartTime(_ time: Int) -> Signal<UserProtocol?, NoError> {
+    func updateDayStartTime(_ time: Int) -> Signal<UserProtocol?, Never> {
         let call = UpdateDayStartTimeCall(time)
         call.fire()
         return call.objectSignal.on(value: handleUserUpdate())
     }
     
-    func sleep() -> Signal<EmptyResponseProtocol?, NoError> {
+    func sleep() -> Signal<EmptyResponseProtocol?, Never> {
         let call = SleepCall()
         call.fire()
         return call.objectSignal.on(value: {[weak self]_ in
@@ -155,7 +157,7 @@ class UserRepository: BaseRepository<UserLocalRepository> {
         })
     }
     
-    func login(username: String, password: String) -> Signal<LoginResponseProtocol?, NoError> {
+    func login(username: String, password: String) -> Signal<LoginResponseProtocol?, Never> {
         let call = LocalLoginCall(username: username, password: password)
         call.fire()
         return call.objectSignal.merge(with: call.responseSignal.map({ _ -> LoginResponseProtocol? in
@@ -169,7 +171,7 @@ class UserRepository: BaseRepository<UserLocalRepository> {
         })
     }
     
-    func register(username: String, password: String, confirmPassword: String, email: String) -> Signal<LoginResponseProtocol?, NoError> {
+    func register(username: String, password: String, confirmPassword: String, email: String) -> Signal<LoginResponseProtocol?, Never> {
         let call = LocalRegisterCall(username: username, password: password, confirmPassword: confirmPassword, email: email)
         call.fire()
         return call.objectSignal.on(value: { loginResponse in
@@ -180,7 +182,7 @@ class UserRepository: BaseRepository<UserLocalRepository> {
         })
     }
     
-    func login(userID: String, network: String, accessToken: String) -> Signal<LoginResponseProtocol?, NoError> {
+    func login(userID: String, network: String, accessToken: String) -> Signal<LoginResponseProtocol?, Never> {
         let call = SocialLoginCall(userID: userID, network: network, accessToken: accessToken)
         call.fire()
         return call.objectSignal.on(value: { loginResponse in
@@ -191,7 +193,7 @@ class UserRepository: BaseRepository<UserLocalRepository> {
         })
     }
     
-    func resetAccount() -> Signal<UserProtocol?, NoError> {
+    func resetAccount() -> Signal<UserProtocol?, Never> {
         let call = ResetAccountCall()
         call.fire()
         return call.objectSignal.flatMap(.latest, {[weak self] (_) in
@@ -199,7 +201,7 @@ class UserRepository: BaseRepository<UserLocalRepository> {
         })
     }
     
-    func deleteAccount(password: String) -> Signal<HTTPURLResponse, NoError> {
+    func deleteAccount(password: String) -> Signal<HTTPURLResponse, Never> {
         let call = DeleteAccountCall(password: password)
         call.fire()
         return call.httpResponseSignal.on(value: {[weak self] response in
@@ -227,11 +229,11 @@ class UserRepository: BaseRepository<UserLocalRepository> {
         return call.objectSignal.flatMap(.concat, {[weak self] (_) in
             return self?.getUser().take(first: 1) ?? SignalProducer.empty
         }).on(value: {[weak self]user in
-            self?.localRepository.updateCall({
+            self?.localRepository.updateCall { _ in
                 if let local = user.authentication?.local {
                     local.email = newEmail
                 }
-            })
+            }
         })
     }
     
@@ -245,29 +247,29 @@ class UserRepository: BaseRepository<UserLocalRepository> {
             .flatMap(.concat, {[weak self] (_) in
             return self?.getUser().take(first: 1) ?? SignalProducer.empty
         }).on(value: {[weak self]user in
-            self?.localRepository.updateCall({
+            self?.localRepository.updateCall { _ in
                 if let local = user.authentication?.local {
                     local.username = newUsername
                     user.flags?.verifiedUsername = true
                 }
-            })
+            }
             ToastManager.show(text: L10n.usernameConfirmedToast, color: .green)
         })
     }
     
-    func verifyUsername(_ newUsername: String) -> Signal<VerifyUsernameResponse?, NoError> {
+    func verifyUsername(_ newUsername: String) -> Signal<VerifyUsernameResponse?, Never> {
         let call = VerifyUsernameCall(username: newUsername)
         call.fire()
         return call.objectSignal
     }
     
-    func updatePassword(newPassword: String, password: String, confirmPassword: String) -> Signal<EmptyResponseProtocol?, NoError> {
+    func updatePassword(newPassword: String, password: String, confirmPassword: String) -> Signal<EmptyResponseProtocol?, Never> {
         let call = UpdatePasswordCall(newPassword: newPassword, oldPassword: password, confirmPassword: confirmPassword)
         call.fire()
         return call.objectSignal
     }
     
-    func revive() -> Signal<UserProtocol?, NoError> {
+    func revive() -> Signal<UserProtocol?, Never> {
         let call = ReviveUserCall()
         call.fire()
         return call.objectSignal.flatMap(.latest, {[weak self] (_) in
@@ -283,8 +285,8 @@ class UserRepository: BaseRepository<UserLocalRepository> {
         return localRepository.getInAppRewards(userID: currentUserId ?? "")
     }
     
-    func retrieveInAppRewards() -> Signal<[InAppRewardProtocol]?, NoError> {
-        let call = RetrieveInAppRewardsCall()
+    func retrieveInAppRewards() -> Signal<[InAppRewardProtocol]?, Never> {
+        let call = RetrieveInAppRewardsCall(language: LanguageHandler.getAppLanguage().code)
         call.fire()
         return call.arraySignal.on(value: { inAppRewards in
             if let userID = self.currentUserId, let inAppRewards = inAppRewards {
@@ -293,47 +295,47 @@ class UserRepository: BaseRepository<UserLocalRepository> {
         })
     }
     
-    func buyCustomReward(reward: TaskProtocol) -> Signal<TaskResponseProtocol?, NoError> {
+    func buyCustomReward(reward: TaskProtocol) -> Signal<TaskResponseProtocol?, Never> {
         return taskRepository.score(task: reward, direction: .down)
     }
     
-    func disableClassSystem() -> Signal<UserProtocol?, NoError> {
+    func disableClassSystem() -> Signal<UserProtocol?, Never> {
         let call = DisableClassesCall()
         call.fire()
         return call.objectSignal.on(value: handleUserUpdate())
     }
     
-    func selectClass(_ habiticaClass: HabiticaClass) -> Signal<UserProtocol?, NoError> {
+    func selectClass(_ habiticaClass: HabiticaClass) -> Signal<UserProtocol?, Never> {
         let call = SelectClassCall(class: habiticaClass)
         call.fire()
         return call.objectSignal.on(value: handleUserUpdate())
     }
     
-    func reroll() -> Signal<UserProtocol?, NoError> {
+    func reroll() -> Signal<UserProtocol?, Never> {
         let call = RerollCall()
         call.fire()
         return call.objectSignal.on(value: handleUserUpdate())
     }
     
-    func sendPasswordResetEmail(email: String) -> Signal<EmptyResponseProtocol?, NoError> {
+    func sendPasswordResetEmail(email: String) -> Signal<EmptyResponseProtocol?, Never> {
         let call = SendPasswordResetEmailCall(email: email)
         call.fire()
         return call.objectSignal
     }
     
-    func purchaseGems(receipt: [String: Any], recipient: String? = nil) -> Signal<EmptyResponseProtocol?, NoError> {
+    func purchaseGems(receipt: [String: Any], recipient: String? = nil) -> Signal<EmptyResponseProtocol?, Never> {
         let call = PurchaseGemsCall(receipt: receipt, recipient: recipient)
         call.fire()
         return call.objectSignal
     }
     
-    func purchaseNoRenewSubscription(identifier: String, receipt: [String: Any], recipient: String? = nil) -> Signal<EmptyResponseProtocol?, NoError> {
+    func purchaseNoRenewSubscription(identifier: String, receipt: [String: Any], recipient: String? = nil) -> Signal<EmptyResponseProtocol?, Never> {
         let call = PurchaseNoRenewSubscriptionCall(identifier: identifier, receipt: receipt, recipient: recipient)
         call.fire()
         return call.objectSignal
     }
     
-    func subscribe(sku: String, receipt: String) -> Signal<EmptyResponseProtocol?, NoError> {
+    func subscribe(sku: String, receipt: String) -> Signal<EmptyResponseProtocol?, Never> {
         let call = SubscribeCall(sku: sku, receipt: receipt)
         call.fire()
         return call.objectSignal
@@ -345,7 +347,7 @@ class UserRepository: BaseRepository<UserLocalRepository> {
         })
     }
     
-    func retrieveInboxMessages() -> Signal<[InboxMessageProtocol]?, NoError> {
+    func retrieveInboxMessages() -> Signal<[InboxMessageProtocol]?, Never> {
         let call = RetrieveInboxMessagesCall()
         call.fire()
         return call.arraySignal.on(value: {[weak self] messages in
@@ -355,7 +357,7 @@ class UserRepository: BaseRepository<UserLocalRepository> {
         })
     }
     
-    func registerPushDevice(user: UserProtocol) -> Signal<EmptyResponseProtocol?, NoError> {
+    func registerPushDevice(user: UserProtocol) -> Signal<EmptyResponseProtocol?, Never> {
         if let deviceID = UserDefaults().string(forKey: "PushNotificationDeviceToken") {
             if user.pushDevices.contains(where: { (pushDevice) -> Bool in
                 return pushDevice.regId == deviceID
@@ -368,13 +370,23 @@ class UserRepository: BaseRepository<UserLocalRepository> {
         return Signal.empty
     }
     
-    func deregisterPushDevice() -> Signal<EmptyResponseProtocol?, NoError> {
+    func deregisterPushDevice() -> Signal<EmptyResponseProtocol?, Never> {
         if let deviceID = UserDefaults().string(forKey: "PushNotificationDeviceToken") {
             let call = DeregisterPushDeviceCall(regID: deviceID)
             call.fire()
             return call.objectSignal
         }
         return Signal.empty
+    }
+    
+    func getNotifications() -> SignalProducer<ReactiveResults<[NotificationProtocol]>, ReactiveSwiftRealmError> {
+        return currentUserIDProducer.skipNil().flatMap(.latest, { (userID) in
+            return self.localRepository.getNotifications(userID: userID)
+        })
+    }
+    
+    func createNotification(id: String, type: HabiticaNotificationType) -> NotificationProtocol {
+        return localRepository.createNotification(userID: currentUserId ?? "", id: id, type: type)
     }
     
     private func handleUserUpdate() -> ((UserProtocol?) -> Void) {

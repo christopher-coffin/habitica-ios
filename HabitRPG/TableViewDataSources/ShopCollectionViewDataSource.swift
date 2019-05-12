@@ -9,7 +9,6 @@
 import UIKit
 import Habitica_Models
 import ReactiveSwift
-import Result
 
 @objc
 protocol ShopCollectionViewDataSourceProtocol: UICollectionViewDelegateFlowLayout {
@@ -139,9 +138,9 @@ class ShopCollectionViewDataSource: BaseReactiveCollectionViewDataSource<InAppRe
         }
         fetchGearDisposable = inventoryRepository.getShop(identifier: Constants.GearMarketKey)
             .map({ (shop) -> [InAppRewardProtocol] in
-                return shop?.categories.filter({ (category) -> Bool in
+                return shop?.categories.first(where: { (category) -> Bool in
                     category.identifier == self.selectedGearCategory
-                }).first?.items ?? []
+                })?.items ?? []
             })
             .combineLatest(with: self.inventoryRepository.getOwnedGear()
                 .map({ (ownedGear, _) in
@@ -165,11 +164,11 @@ class ShopCollectionViewDataSource: BaseReactiveCollectionViewDataSource<InAppRe
     
     func retrieveShopInventory(_ completed: (() -> Void)?) {
         inventoryRepository.retrieveShopInventory(identifier: shopIdentifier)
-            .flatMap(.latest, {[weak self] (shop) -> Signal<ShopProtocol?, NoError> in
+            .flatMap(.latest, {[weak self] (shop) -> Signal<ShopProtocol?, Never> in
                 if shop?.identifier == Constants.MarketKey {
                     return self?.inventoryRepository.retrieveShopInventory(identifier: Constants.GearMarketKey) ?? Signal.empty
                 } else {
-                    let signal = Signal<ShopProtocol?, NoError>.pipe()
+                    let signal = Signal<ShopProtocol?, Never>.pipe()
                     signal.input.send(value: shop)
                     return signal.output
                 }
@@ -216,7 +215,7 @@ class ShopCollectionViewDataSource: BaseReactiveCollectionViewDataSource<InAppRe
             } else {
                 headerView.titleLabel.text = titleFor(section: indexPath.section)
             }
-            
+            headerView.backgroundColor = ThemeService.shared.theme.windowBackgroundColor
             return headerView
         }
         return UICollectionReusableView()

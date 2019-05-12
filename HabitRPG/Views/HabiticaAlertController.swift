@@ -24,6 +24,8 @@ class HabiticaAlertController: UIViewController, Themeable {
     @IBOutlet var centerConstraint: NSLayoutConstraint!
     @IBOutlet weak var scrollviewHeightConstraint: NSLayoutConstraint!
     @IBOutlet weak var buttonBackgroundView: UIView!
+    @IBOutlet weak var alertBackgroundView: UIView!
+    @IBOutlet weak var buttonContainerView: UIView!
     
     private var buttonHandlers = [Int: ((UIButton) -> Swift.Void)]()
     private var buttons = [UIButton]()
@@ -41,7 +43,7 @@ class HabiticaAlertController: UIViewController, Themeable {
         }
     }
     
-    var titleBackgroundColor: UIColor = .white {
+    var titleBackgroundColor: UIColor = ThemeService.shared.theme.contentBackgroundColor {
         didSet {
             configureTitleView()
         }
@@ -53,7 +55,7 @@ class HabiticaAlertController: UIViewController, Themeable {
                 return
             }
             attributedMessage = nil
-            titleBackgroundColor = .white
+            titleBackgroundColor = ThemeService.shared.theme.contentBackgroundColor
             configureMessageView()
         }
     }
@@ -64,7 +66,7 @@ class HabiticaAlertController: UIViewController, Themeable {
                 return
             }
             message = nil
-            titleBackgroundColor = .white
+            titleBackgroundColor = ThemeService.shared.theme.contentBackgroundColor
             configureMessageView()
         }
     }
@@ -121,8 +123,13 @@ class HabiticaAlertController: UIViewController, Themeable {
     }
     
     func applyTheme(theme: Theme) {
-        view.backgroundColor = theme.backgroundTintColor.darker(by: 50)?.withAlphaComponent(0.6)
+        view.backgroundColor = theme.dimmBackgroundColor.withAlphaComponent(0.7)
+        buttonContainerView.backgroundColor = theme.contentBackgroundColor
         buttonBackgroundView.backgroundColor = theme.tintColor.withAlphaComponent(0.05)
+        alertBackgroundView.backgroundColor = theme.contentBackgroundColor
+        closeButton.backgroundColor = theme.contentBackgroundColor
+        
+        titleLabel.textColor = theme.primaryTextColor
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -181,14 +188,16 @@ class HabiticaAlertController: UIViewController, Themeable {
     }
     
     @objc
-    func addAction(title: String, style: UIAlertAction.Style = .default, isMainAction: Bool = false, closeOnTap: Bool = true, handler: ((UIButton) -> Swift.Void)? = nil) {
+    func addAction(title: String, style: UIAlertAction.Style = .default, isMainAction: Bool = false, closeOnTap: Bool = true, identifier: String? = nil, handler: ((UIButton) -> Swift.Void)? = nil) {
         let button = UIButton()
+        if let identifier = identifier {
+            button.accessibilityIdentifier = identifier
+        }
         button.titleLabel?.lineBreakMode = .byWordWrapping
         button.titleLabel?.textAlignment = .center
         button.setTitle(title, for: .normal)
-        button.backgroundColor = UIColor("#F9F7FF")
         if style == .destructive {
-            button.setTitleColor(UIColor.red100(), for: .normal)
+            button.setTitleColor(ThemeService.shared.theme.errorColor, for: .normal)
         } else {
             button.setTitleColor(ThemeService.shared.theme.tintColor, for: .normal)
         }
@@ -240,7 +249,7 @@ class HabiticaAlertController: UIViewController, Themeable {
             return
         }
         let label = UILabel()
-        label.textColor = UIColor.gray100()
+        label.textColor = ThemeService.shared.theme.secondaryTextColor
         label.font = CustomFontMetrics.scaledSystemFont(ofSize: 15)
         if message != nil {
             label.text = message
@@ -277,6 +286,7 @@ class HabiticaAlertController: UIViewController, Themeable {
         if closeButton != nil {
             closeButton.isHidden = closeAction == nil
             closeButton.setTitle(closeTitle, for: .normal)
+            closeButton.tintColor = ThemeService.shared.theme.tintColor
         }
     }
     
@@ -360,12 +370,12 @@ extension HabiticaAlertController {
     
     @objc
     func addCancelAction(handler: ((UIButton) -> Void)? = nil) {
-        self.addAction(title: L10n.cancel, handler: handler)
+        self.addAction(title: L10n.cancel, identifier: "Cancel", handler: handler)
     }
     
     @objc
     func addCloseAction(handler: ((UIButton) -> Void)? = nil) {
-        self.addAction(title: L10n.close, handler: handler)
+        self.addAction(title: L10n.close, identifier: "Close", handler: handler)
     }
     
     @objc

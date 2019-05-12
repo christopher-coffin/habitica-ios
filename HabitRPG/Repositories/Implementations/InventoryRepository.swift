@@ -11,7 +11,6 @@ import Habitica_Models
 import Habitica_Database
 import Habitica_API_Client
 import ReactiveSwift
-import Result
 
 class InventoryRepository: BaseRepository<InventoryLocalRepository> {
 
@@ -58,7 +57,7 @@ class InventoryRepository: BaseRepository<InventoryLocalRepository> {
         return localRepository.getQuest(key: key)
     }
     
-    func sell(item: ItemProtocol) -> Signal<UserProtocol?, NoError> {
+    func sell(item: ItemProtocol) -> Signal<UserProtocol?, Never> {
         let call = SellItemCall(item: item)
         call.fire()
         return call.objectSignal.on(value: {[weak self]user in
@@ -68,7 +67,7 @@ class InventoryRepository: BaseRepository<InventoryLocalRepository> {
         })
     }
     
-    func hatchPet(egg: EggProtocol, potion: HatchingPotionProtocol) -> Signal<UserItemsProtocol?, NoError> {
+    func hatchPet(egg: EggProtocol, potion: HatchingPotionProtocol) -> Signal<UserItemsProtocol?, Never> {
         let call = HatchPetCall(egg: egg, potion: potion)
         call.fire()
         return call.objectSignal.on(value: {[weak self]userItems in
@@ -78,13 +77,13 @@ class InventoryRepository: BaseRepository<InventoryLocalRepository> {
         })
     }
     
-    func inviteToQuest(quest: QuestProtocol) -> Signal<EmptyResponseProtocol?, NoError> {
+    func inviteToQuest(quest: QuestProtocol) -> Signal<EmptyResponseProtocol?, Never> {
         let call = InviteToQuestCall(groupID: "party", quest: quest)
         call.fire()
         return call.objectSignal
     }
     
-    func equip(type: String, key: String) -> Signal<UserItemsProtocol?, NoError> {
+    func equip(type: String, key: String) -> Signal<UserItemsProtocol?, Never> {
         let call = EquipCall(type: type, itemKey: key)
         call.fire()
         return call.objectSignal.on(value: {[weak self]userItems in
@@ -94,7 +93,7 @@ class InventoryRepository: BaseRepository<InventoryLocalRepository> {
         })
     }
     
-    func buyObject(key: String, price: Int, text: String) -> Signal<BuyResponseProtocol?, NoError> {
+    func buyObject(key: String, price: Int, text: String) -> Signal<BuyResponseProtocol?, Never> {
         let call = BuyObjectCall(key: key)
         call.fire()
         return call.habiticaResponseSignal.on(value: {[weak self]habiticaResponse in
@@ -133,13 +132,16 @@ class InventoryRepository: BaseRepository<InventoryLocalRepository> {
                         ToastManager.show(text: L10n.purchased(text), color: .green)
                     }
                 }
+                if #available(iOS 10.0, *) {
+                    UINotificationFeedbackGenerator.oneShotNotificationOccurred(.success)
+                }
             }
         }).map({ habiticaResponse in
             return habiticaResponse?.data
         })
     }
     
-    func purchaseItem(purchaseType: String, key: String, value: Int, text: String) -> Signal<UserProtocol?, NoError> {
+    func purchaseItem(purchaseType: String, key: String, value: Int, text: String) -> Signal<UserProtocol?, Never> {
         let call = PurchaseItemCall(purchaseType: purchaseType, key: key)
         call.fire()
         return call.objectSignal.on(value: {[weak self]updatedUser in
@@ -153,7 +155,7 @@ class InventoryRepository: BaseRepository<InventoryLocalRepository> {
         })
     }
     
-    func purchaseHourglassItem(purchaseType: String, key: String, text: String) -> Signal<UserProtocol?, NoError> {
+    func purchaseHourglassItem(purchaseType: String, key: String, text: String) -> Signal<UserProtocol?, Never> {
         let call = PurchaseHourglassItemCall(purchaseType: purchaseType, key: key)
         call.fire()
         return call.objectSignal.on(value: {[weak self]updatedUser in
@@ -166,7 +168,7 @@ class InventoryRepository: BaseRepository<InventoryLocalRepository> {
         })
     }
     
-    func purchaseMysterySet(identifier: String, text: String) -> Signal<UserProtocol?, NoError> {
+    func purchaseMysterySet(identifier: String, text: String) -> Signal<UserProtocol?, Never> {
         let call = PurchaseMysterySetCall(identifier: identifier)
         call.fire()
         return call.objectSignal.on(value: {[weak self]updatedUser in
@@ -179,12 +181,12 @@ class InventoryRepository: BaseRepository<InventoryLocalRepository> {
         })
     }
     
-    func openMysteryItem() -> Signal<GearProtocol?, NoError> {
+    func openMysteryItem() -> Signal<GearProtocol?, Never> {
         let call = OpenMysteryItemCall()
         call.fire()
         return call.objectSignal
             .skipNil()
-            .flatMap(.latest, {[weak self] (gear) -> SignalProducer<GearProtocol?, NoError> in
+            .flatMap(.latest, {[weak self] (gear) -> SignalProducer<GearProtocol?, Never> in
                 let key = gear.key ?? ""
                 return self?.localRepository.getGear(predicate: NSPredicate(format: "key == %@", key)).map({ (values, _) in
                     return values.first
@@ -202,7 +204,7 @@ class InventoryRepository: BaseRepository<InventoryLocalRepository> {
             })
     }
     
-    func purchaseQuest(key: String, text: String) -> Signal<UserProtocol?, NoError> {
+    func purchaseQuest(key: String, text: String) -> Signal<UserProtocol?, Never> {
         let call = PurchaseQuestCall(key: key)
         call.fire()
         return call.objectSignal.on(value: {[weak self]updatedUser in
@@ -215,7 +217,7 @@ class InventoryRepository: BaseRepository<InventoryLocalRepository> {
         })
     }
     
-    func togglePinnedItem(pinType: String, path: String) -> Signal<PinResponseProtocol?, NoError> {
+    func togglePinnedItem(pinType: String, path: String) -> Signal<PinResponseProtocol?, Never> {
         let call = TogglePinnedItemCall(pinType: pinType, path: path)
         call.fire()
         return call.objectSignal.on(value: {[weak self] pinResponse in
@@ -225,8 +227,8 @@ class InventoryRepository: BaseRepository<InventoryLocalRepository> {
         })
     }
     
-    func retrieveShopInventory(identifier: String) -> Signal<ShopProtocol?, NoError> {
-        let call = RetrieveShopInventoryCall(identifier: identifier)
+    func retrieveShopInventory(identifier: String) -> Signal<ShopProtocol?, Never> {
+        let call = RetrieveShopInventoryCall(identifier: identifier, language: LanguageHandler.getAppLanguage().code)
         call.fire()
         return call.objectSignal.on(value: {[weak self]shop in
             if let shop = shop {
@@ -244,7 +246,7 @@ class InventoryRepository: BaseRepository<InventoryLocalRepository> {
         return localRepository.getShops()
     }
     
-    func feed(pet: PetProtocol, food: FoodProtocol) -> Signal<Int?, NoError> {
+    func feed(pet: PetProtocol, food: FoodProtocol) -> Signal<Int?, Never> {
         let call = FeedPetCall(pet: pet, food: food)
         call.fire()
         call.habiticaResponseSignal.observeValues { response in

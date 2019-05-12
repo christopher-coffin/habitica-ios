@@ -31,8 +31,6 @@ protocol FilterTableViewDataSourceProtocol {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int
     @objc(tableView:cellForRowAtIndexPath:)
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell
-    @objc
-    func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath)
 }
 
 @objc
@@ -78,6 +76,7 @@ class FilterTableViewDataSource: BaseReactiveTableViewDataSource<TagProtocol>, F
             let checkboxView = cell.viewWithTag(2) as? CheckboxView
             checkboxView?.boxCornerRadius = (checkboxView?.size ?? 0) / 2
             checkboxView?.isUserInteractionEnabled = false
+            checkboxView?.backgroundColor = ThemeService.shared.theme.contentBackgroundColor
             if selectedTagIds.contains(tag.id ?? "") {
                 checkboxView?.checkColor = UIColor(white: 1, alpha: 0.7)
                 checkboxView?.boxBorderColor = ThemeService.shared.theme.backgroundTintColor
@@ -95,7 +94,7 @@ class FilterTableViewDataSource: BaseReactiveTableViewDataSource<TagProtocol>, F
     
     func selectTag(at indexPath: IndexPath) {
         if let tag = item(at: indexPath), let tagID = tag.id {
-            if let index = selectedTagIds.index(of: tagID) {
+            if let index = selectedTagIds.firstIndex(of: tagID) {
                 selectedTagIds.remove(at: index)
             } else {
                 selectedTagIds.append(tagID)
@@ -125,12 +124,6 @@ class FilterTableViewDataSource: BaseReactiveTableViewDataSource<TagProtocol>, F
         if let tag = taskRepository.getEditableTag(id: id) {
             tag.text = text
             taskRepository.updateTag(tag).observeCompleted {}
-        }
-    }
-    
-    func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
-        if editingStyle == .delete {
-            self.deleteTag(at: indexPath)
         }
     }
 }

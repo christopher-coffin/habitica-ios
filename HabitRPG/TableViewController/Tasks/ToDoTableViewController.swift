@@ -40,10 +40,26 @@ class ToDoTableViewController: TaskTableViewController {
         dataSource?.clearCompletedTodos()
     }
     
+    override func refresh() {
+        dataSource?.retrieveData(completed: { [weak self] in
+            self?.refreshControl?.endRefreshing()
+            if self?.filterType == 2 {
+                self?.dataSource?.fetchCompletedTodos()
+            }
+        })
+    }
+    
+    override func didChangeFilter() {
+        super.didChangeFilter()
+        if filterType == 2 {
+            dataSource?.fetchCompletedTodos()
+        }
+    }
+    
     override func dataSourceIsEmpty() {
         tableView.dataSource = emptyDataSource
         tableView.reloadData()
-        tableView.backgroundColor = UIColor.gray700()
+        tableView.backgroundColor = ThemeService.shared.theme.windowBackgroundColor
         tableView.separatorStyle = .none
         tableView.allowsSelection = false
     }

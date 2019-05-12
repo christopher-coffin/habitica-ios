@@ -50,7 +50,7 @@ protocol TopHeaderNavigationControllerProtocol: class {
 class TopHeaderViewController: UINavigationController, TopHeaderNavigationControllerProtocol, Themeable {
     @objc public var state: TopHeaderState = .visible
     @objc public var defaultNavbarHiddenColor = UIColor.purple300()
-    @objc public var defaultNavbarVisibleColor = UIColor.white
+    @objc public var defaultNavbarVisibleColor = ThemeService.shared.theme.contentBackgroundColor
     private var headerView: UIView?
     private var alternativeHeaderView: UIView?
     private let backgroundView = UIView()
@@ -179,9 +179,6 @@ class TopHeaderViewController: UINavigationController, TopHeaderNavigationContro
         
         let nibViews = Bundle.main.loadNibNamed("UserTopHeader", owner: self, options: nil)
         self.headerView = nibViews?[0] as? UIView
-        self.backgroundView.backgroundColor = .gray700()
-        self.bottomBorderView.backgroundColor = .gray600()
-        self.upperBackgroundView.backgroundColor = .white
         if let headerView = self.headerView {
             self.backgroundView.addSubview(headerView)
         }
@@ -196,11 +193,13 @@ class TopHeaderViewController: UINavigationController, TopHeaderNavigationContro
     }
 
     func applyTheme(theme: Theme) {
-        defaultNavbarHiddenColor = theme.backgroundTintColor
+        defaultNavbarHiddenColor = theme.navbarHiddenColor
         defaultNavbarVisibleColor = theme.contentBackgroundColor
         visibleTintColor = theme.tintColor
         setNavigationBarColors(navbarColorBlendingAlpha)
         bottomBorderView.backgroundColor = theme.separatorColor
+        backgroundView.backgroundColor = theme.contentBackgroundColorDimmed
+        upperBackgroundView.backgroundColor = theme.contentBackgroundColor
     }
     
     override func viewWillLayoutSubviews() {

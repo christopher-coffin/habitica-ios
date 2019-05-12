@@ -11,7 +11,6 @@ import SlackTextViewController
 import Down
 import Habitica_Models
 import ReactiveSwift
-import Result
 
 class GroupChatViewController: SLKTextViewController {
     
@@ -33,9 +32,9 @@ class GroupChatViewController: SLKTextViewController {
     private let userRepository = UserRepository()
     private let configRepository = ConfigRepository()
     private let disposable = ScopedDisposable(CompositeDisposable())
-    private var autocompleteUsernamesObserver: Signal<String, NoError>.Observer?
+    private var autocompleteUsernamesObserver: Signal<String, Never>.Observer?
     private var autocompleteUsernames: [MemberProtocol] = []
-    private var autocompleteEmojisObserver: Signal<String, NoError>.Observer?
+    private var autocompleteEmojisObserver: Signal<String, Never>.Observer?
     private var autocompleteEmojis: [String] = []
     
     override func viewDidLoad() {
@@ -50,7 +49,7 @@ class GroupChatViewController: SLKTextViewController {
         tableView?.separatorStyle = .none
         tableView?.rowHeight = UITableView.automaticDimension
         tableView?.estimatedRowHeight = 90
-        tableView?.backgroundColor = UIColor.gray700()
+        tableView?.backgroundColor = ThemeService.shared.theme.windowBackgroundColor
 
         if #available(iOS 10.0, *) {
             tableView?.refreshControl = UIRefreshControl()
@@ -65,40 +64,55 @@ class GroupChatViewController: SLKTextViewController {
         textInputbar.charCountLabelNormalColor = UIColor.gray400()
         textInputbar.charCountLabelWarningColor = UIColor.red50()
         textInputbar.charCountLabel.font = UIFont.systemFont(ofSize: 11, weight: .bold)
+        textInputbar.backgroundColor = ThemeService.shared.theme.windowBackgroundColor
+        textInputbar.textView.backgroundColor = ThemeService.shared.theme.contentBackgroundColor
+        textInputbar.textView.placeholderColor = ThemeService.shared.theme.dimmedTextColor
+        textInputbar.textView.textColor = ThemeService.shared.theme.primaryTextColor
         
         disposable.inner.add(userRepository.getUser().on(value: {[weak self] user in
             self?.checkGuidelinesAccepted(user: user)
         }).start())
         
-        if configRepository.bool(variable: .enableUsernameAutocomplete) {
-            self.registerPrefixes(forAutoCompletion: ["@", ":"])
-        } else {
-            self.registerPrefixes(forAutoCompletion: [":"])
-        }
-        let (signal, observer) = Signal<String, NoError>.pipe()
+        self.registerPrefixes(forAutoCompletion: ["@", ":"])
+        let (signal, observer) = Signal<String, Never>.pipe()
         autocompleteUsernamesObserver = observer
-        disposable.inner.add(signal
-            .filter({ username -> Bool in return !username.isEmpty })
-            .throttle(2, on: QueueScheduler.main)
-            .flatMap(.latest, { username in
-                self.socialRepository.findUsernames(username, context: self.autocompleteContext, id: self.groupID)
-            })
-            .observeValues({ members in
-                self.autocompleteUsernames = members
-                if self.foundWord != nil {
-                    self.showAutoCompletionView(self.autocompleteUsernames.count > 0)
-                }
-            })
-        )
         
-        let (emojiSignal, emojiObserver) = Signal<String, NoError>.pipe()
+        if configRepository.bool(variable: .enableUsernameAutocomplete) {
+            disposable.inner.add(signal
+                .filter({ username -> Bool in return !username.isEmpty })
+                .throttle(2, on: QueueScheduler.main)
+                .flatMap(.latest, { username in
+                    self.socialRepository.findUsernames(username, context: self.autocompleteContext, id: self.groupID)
+                })
+                .observeValues({ members in
+                    self.autocompleteUsernames = members
+                    if self.foundWord != nil {
+                        self.showAutoCompletionView(self.autocompleteUsernames.isEmpty == false)
+                    }
+                })
+            )
+        } else {
+            disposable.inner.add(signal
+                .filter({ username -> Bool in return !username.isEmpty })
+                .flatMap(.latest, { username in
+                    self.socialRepository.findUsernamesLocally(username, id: self.groupID)
+                })
+                .observeValues({ (members) in
+                    self.autocompleteUsernames = members
+                    if self.foundWord != nil {
+                        self.showAutoCompletionView(self.autocompleteUsernames.isEmpty == false)
+                    }
+                }))
+        }
+        
+        let (emojiSignal, emojiObserver) = Signal<String, Never>.pipe()
         autocompleteEmojisObserver = emojiObserver
         disposable.inner.add(emojiSignal
             .filter { emoji -> Bool in return !emoji.isEmpty }
             .throttle(0.5, on: QueueScheduler.main)
             .observeValues({ emoji in
                 self.autocompleteEmojis = NSString.emojiCheatCodes(matching: emoji)
-                self.showAutoCompletionView(self.autocompleteEmojis.count > 0)
+                self.showAutoCompletionView(self.autocompleteEmojis.isEmpty == false)
             })
         )
     }
@@ -172,11 +186,14 @@ class GroupChatViewController: SLKTextViewController {
         self.textView.refreshFirstResponder()
         let message = self.textView.text
         if let message = message, let groupID = self.groupID {
+            if #available(iOS 10.0, *) {
+                UIImpactFeedbackGenerator.oneShotImpactOccurred(.light)
+            }
             socialRepository.post(chatMessage: message, toGroup: groupID).observeResult { (result) in
                 switch result {
                 case .failure:
                     self.textView.text = message
-                case .success(_):
+                case .success:
                     return
                 }
             }
@@ -247,10 +264,11 @@ class GroupChatViewController: SLKTextViewController {
         } else if foundPrefix == ":" {
             count = autocompleteEmojis.count
         }
+        // swiftlint:disable:next empty_count
         if count == 0 {
             return 0
         }
-        let cellHeight = self.autoCompletionView.delegate?.tableView!(self.autoCompletionView, heightForRowAt: IndexPath(row: 0, section: 0))
+        let cellHeight = self.autoCompletionView.delegate?.tableView?(self.autoCompletionView, heightForRowAt: IndexPath(row: 0, section: 0))
         guard let height = cellHeight else {
             return 0
         }
@@ -285,6 +303,7 @@ class GroupChatViewController: SLKTextViewController {
                 return
             }
             let acceptButton = acceptView.viewWithTag(1) as? UIButton
+            acceptButton?.setTitle(L10n.accept, for: .normal)
             acceptButton?.addTarget(self, action: #selector(acceptGuidelines), for: .touchUpInside)
             let descriptionButton = acceptView.viewWithTag(2) as? UIButton
             descriptionButton?.addTarget(self, action: #selector(openGuidelinesView), for: .touchUpInside)
@@ -311,7 +330,7 @@ class GroupChatViewController: SLKTextViewController {
     }
     
     func configureReplyTo(_ username: String?) {
-        if textView.text.count > 0 {
+        if textView.text.isEmpty == false {
             textView.text = "\(textView.text ?? "") @\(username ?? "") "
         } else {
             textView.text = "@\(username ?? "") "

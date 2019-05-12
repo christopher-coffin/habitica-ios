@@ -9,14 +9,14 @@
 import UIKit
 import Habitica_Models
 
-class TaskTableViewController: HRPGBaseViewController, UISearchBarDelegate, UITableViewDragDelegate, UITableViewDropDelegate, DataSourceEmptyDelegate {
+class TaskTableViewController: BaseTableViewController, UISearchBarDelegate, UITableViewDragDelegate, UITableViewDropDelegate, DataSourceEmptyDelegate {
     public var dataSource: TaskTableViewDataSource?
     public var filterType: Int = 0
     @objc public var scrollToTaskAfterLoading: String?
     var readableName: String?
     var typeName: String?
     var extraCellSpacing: Int = 0
-    var searchBar: UISearchBar?
+    var searchBar = UISearchBar()
     var scrollTimer: Timer?
     var autoScrollSpeed: CGFloat = 0.0
     var movedTask: TaskProtocol?
@@ -40,10 +40,9 @@ class TaskTableViewController: HRPGBaseViewController, UISearchBarDelegate, UITa
         refresher.addTarget(self, action: #selector(refresh), for: .valueChanged)
         refreshControl = refresher
         
-        searchBar = UISearchBar(frame: CGRect(x: 0, y: 0, width: tableView.bounds.size.width, height: 48))
-        searchBar?.placeholder = L10n.search
-        searchBar?.delegate = self
-        searchBar?.backgroundImage = UIImage()
+        searchBar.frame = CGRect(x: 0, y: 0, width: tableView.bounds.size.width, height: 48)
+        searchBar.placeholder = L10n.search
+        searchBar.delegate = self
         tableView.tableHeaderView = searchBar
         
         NotificationCenter.default.addObserver(self, selector: #selector(didChangeFilter), name: NSNotification.Name(rawValue: "taskFilterChanged"), object: nil)
@@ -70,11 +69,11 @@ class TaskTableViewController: HRPGBaseViewController, UISearchBarDelegate, UITa
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
-        if let searchString = HRPGSearchDataManager.shared().searchString, searchString != "" {
-            searchBar?.text = searchString
+        if let searchString = HRPGSearchDataManager.shared().searchString, searchString.isEmpty == false {
+            searchBar.text = searchString
         } else {
-            searchBar?.text = ""
-            searchBar?.setShowsCancelButton(false, animated: true)
+            searchBar.text = ""
+            searchBar.setShowsCancelButton(false, animated: true)
         }
         
         tableView.reloadData()
@@ -100,9 +99,8 @@ class TaskTableViewController: HRPGBaseViewController, UISearchBarDelegate, UITa
     
     @objc
     func refresh() {
-        weak var weakSelf = self
-        dataSource?.retrieveData(completed: {
-            weakSelf?.refreshControl?.endRefreshing()
+        dataSource?.retrieveData(completed: { [weak self] in
+            self?.refreshControl?.endRefreshing()
         })
     }
     
@@ -141,9 +139,7 @@ class TaskTableViewController: HRPGBaseViewController, UISearchBarDelegate, UITa
         navigationItem.title = title
     }
     
-    @objc
-    @IBAction
-    func longPressRecognized(sender: Any?) {
+    @IBAction func longPressRecognized(sender: Any?) {
         if let longPress = sender as? UILongPressGestureRecognizer {
             let location = longPress.location(in: tableView)
             guard let indexPath = tableView.indexPathForRow(at: location) else {
@@ -223,7 +219,7 @@ class TaskTableViewController: HRPGBaseViewController, UISearchBarDelegate, UITa
     }
     
     func scrollToTask(with taskId: String) {
-        if let index = dataSource?.tasks.indices.filter({ dataSource?.tasks[$0].id == taskId }).first {
+        if let index = dataSource?.tasks.indices.first(where: { dataSource?.tasks[$0].id == taskId }) {
             let indexPath = IndexPath(item: index, section: 0)
             tableView.scrollToRow(at: indexPath, at: .middle, animated: true)
         }
@@ -237,7 +233,7 @@ class TaskTableViewController: HRPGBaseViewController, UISearchBarDelegate, UITa
                 predicates.append(contentsOf: dataSource.predicates(filterType: filterType))
                 
                 let selectedTags = tabBarController.selectedTags
-                if selectedTags.count > 0 {
+                if selectedTags.isEmpty == false {
                     predicates.append(NSPredicate(format: "SUBQUERY(realmTags, $tag, $tag.id IN %@).@count = %d", selectedTags, selectedTags.count))
                 }
             }
@@ -264,8 +260,8 @@ class TaskTableViewController: HRPGBaseViewController, UISearchBarDelegate, UITa
     }
     
     override func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
-        searchBar?.resignFirstResponder()
-        searchBar?.setShowsCancelButton(false, animated: true)
+        searchBar.resignFirstResponder()
+        searchBar.setShowsCancelButton(false, animated: true)
     }
     
     @IBAction func unwindFilterChanged(segue: UIStoryboardSegue?) {
@@ -332,6 +328,15 @@ class TaskTableViewController: HRPGBaseViewController, UISearchBarDelegate, UITa
     }
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        #if targetEnvironment(simulator)
+        if HabiticaAppDelegate.isRunningScreenshots() {
+            dataSource?.userRepository.getUser().take(first: 1).on(value: { user in
+                let levelUpView = LevelUpOverlayView(avatar: user)
+                levelUpView.show()
+            }).start()
+            return
+        }
+        #endif
         dataSource?.selectRowAt(indexPath: indexPath)
         performSegue(withIdentifier: "FormSegue", sender: self)
         tableView.deselectRow(at: indexPath, animated: true)
@@ -406,7 +411,7 @@ class TaskTableViewController: HRPGBaseViewController, UISearchBarDelegate, UITa
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
         HRPGSearchDataManager.shared().searchString = searchText
         
-        if searchText == "" {
+        if searchText.isEmpty {
             HRPGSearchDataManager.shared().searchString = nil
         }
         

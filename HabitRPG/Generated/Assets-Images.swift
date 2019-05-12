@@ -1,5 +1,5 @@
 // swiftlint:disable all
-// Generated using SwiftGen, by O.Halligon — https://github.com/SwiftGen/SwiftGen
+// Generated using SwiftGen — https://github.com/SwiftGen/SwiftGen
 
 #if os(OSX)
   import AppKit.NSImage
@@ -151,9 +151,14 @@ internal enum Asset {
   internal static let loginPassword = ImageAsset(name: "login_password")
   internal static let loginUsername = ImageAsset(name: "login_username")
   internal static let logoText = ImageAsset(name: "logo_text")
+  internal static let melior = ImageAsset(name: "melior")
   internal static let messages = ImageAsset(name: "messages")
   internal static let minus = ImageAsset(name: "minus")
   internal static let minusGray = ImageAsset(name: "minus_gray")
+  internal static let notificationsBailey = ImageAsset(name: "notifications_bailey")
+  internal static let notificationsClose = ImageAsset(name: "notifications_close")
+  internal static let notificationsMystery = ImageAsset(name: "notifications_mystery")
+  internal static let notificationsStats = ImageAsset(name: "notifications_stats")
   internal static let participantsDetails = ImageAsset(name: "participants_details")
   internal static let participantsList = ImageAsset(name: "participants_list")
   internal static let pillGryphon = ImageAsset(name: "pillGryphon")

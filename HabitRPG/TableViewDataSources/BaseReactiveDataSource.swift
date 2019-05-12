@@ -10,7 +10,6 @@ import Foundation
 import ReactiveSwift
 import Habitica_Database
 import Habitica_Models
-import Result
 
 @objc public protocol DataSourceEmptyDelegate: class {
     func dataSourceHasItems()
@@ -25,7 +24,7 @@ class ItemSection<MODEL> {
     var items = [MODEL]()
     
     var isVisible: Bool {
-        return !isHidden && (items.count > 0 || showIfEmpty)
+        return !isHidden && (items.isEmpty == false || showIfEmpty)
     }
     
     init(key: String? = nil, title: String? = nil) {
@@ -110,7 +109,7 @@ class BaseReactiveTableViewDataSource<MODEL>: BaseReactiveDataSource<MODEL>, UIT
          tableView?.insertRows(at: changes.inserted.map({ IndexPath(row: $0, section: section) }), with: .top)
          tableView?.deleteRows(at: changes.deleted.map({ IndexPath(row: $0, section: section) }), with: .automatic)
          tableView?.reloadRows(at: changes.updated.map({ IndexPath(row: $0, section: section) }), with: .automatic)
-         if sections[section].items.count == 0 {
+         if sections[section].items.isEmpty {
          //Remove section since it empty sections are hidden
          tableView?.deleteSections([section], with: .automatic)
          }
@@ -121,7 +120,7 @@ class BaseReactiveTableViewDataSource<MODEL>: BaseReactiveDataSource<MODEL>, UIT
     }
     
     func checkForEmpty() {
-        if sections.filter({ $0.items.count > 0 }).count == 0 {
+        if sections.filter({ $0.items.isEmpty == false }).isEmpty {
             isEmpty = true
             emptyDelegate?.dataSourceIsEmpty()
         } else {
@@ -155,7 +154,7 @@ class BaseReactiveTableViewDataSource<MODEL>: BaseReactiveDataSource<MODEL>, UIT
         return UITableViewCell()
     }
     
-    private func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
+    internal func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
     }
 }
 

@@ -13,7 +13,7 @@ import ReactiveSwift
 import FLEX
 #endif
 
-class MainTabBarController: UITabBarController {
+class MainTabBarController: UITabBarController, Themeable {
     
     private let userRepository = UserRepository()
     private let taskRepository = TaskRepository()
@@ -46,6 +46,11 @@ class MainTabBarController: UITabBarController {
         swipe.numberOfTouchesRequired = 1
         tabBar.addGestureRecognizer(swipe)
         #endif
+        
+        ThemeService.shared.addThemeable(themable: self)
+    }
+    
+    func applyTheme(theme: Theme) {
     }
     
     private func setupDailyIcon() {
@@ -73,6 +78,7 @@ class MainTabBarController: UITabBarController {
     private func fetchData() {
         disposable.inner.add(userRepository.getUser().on(value: {[weak self] user in
             var badgeCount = 0
+            // swiftlint:disable:next empty_count
             if let count = user.inbox?.numberNewMessages, count > 0 {
                 badgeCount += count
             }
@@ -142,6 +148,7 @@ class MainTabBarController: UITabBarController {
     
     private func setBadgeCount(index: Int, count: Int) {
         let item = tabBar.items?[index]
+        // swiftlint:disable:next empty_count
         if count > 0 {
             item?.badgeValue = "\(count)"
         } else {

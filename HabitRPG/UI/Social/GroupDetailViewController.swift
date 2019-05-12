@@ -12,7 +12,7 @@ import ReactiveSwift
 import Down
 import Crashlytics
 
-class GroupDetailViewController: HRPGUIViewController, UITextViewDelegate {
+class GroupDetailViewController: HRPGUIViewController, UITextViewDelegate, Themeable {
     var groupID: String?
 
     var groupProperty = MutableProperty<GroupProtocol?>(nil)
@@ -21,6 +21,7 @@ class GroupDetailViewController: HRPGUIViewController, UITextViewDelegate {
     let userRepository = UserRepository()
     let disposable = ScopedDisposable(CompositeDisposable())
     
+    @IBOutlet weak var scrollView: UIScrollView?
     @IBOutlet weak var groupNameLabel: UILabel?
     @IBOutlet weak var groupDescriptionStackView: CollapsibleStackView?
     @IBOutlet weak var groupDescriptionTextView: UITextView?
@@ -48,12 +49,19 @@ class GroupDetailViewController: HRPGUIViewController, UITextViewDelegate {
         }))
         
         self.leaveInteractor = LeaveGroupInteractor(presentingViewController: self)
+        
+        ThemeService.shared.addThemeable(themable: self)
+    }
+    
+    func applyTheme(theme: Theme) {
+        groupNameLabel?.textColor = theme.primaryTextColor
+        scrollView?.backgroundColor = theme.windowBackgroundColor
     }
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         disposable.inner.add(self.leaveInteractor?.reactive.take(during: self.lifetime)
-            .flatMap(.latest, { group in
+            .flatMap(.latest, { _ in
                 return self.userRepository.retrieveUser()
             })
             .observeCompleted {})
@@ -74,8 +82,8 @@ class GroupDetailViewController: HRPGUIViewController, UITextViewDelegate {
     }
     
     @IBAction func leaveButtonTapped(_ sender: Any) {
-        if let groupID = self.groupProperty.value?.id {
-            leaveInteractor?.run(with: groupID)
+        if let group = self.groupProperty.value {
+            leaveInteractor?.run(with: group)
         }
     }
     

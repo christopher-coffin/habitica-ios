@@ -8,11 +8,9 @@
 
 import Foundation
 import ReactiveSwift
-import Result
 import KeychainAccess
 import Crashlytics
 import Amplitude_iOS
-import Instabug
 import Habitica_API_Client
 
 class AuthenticationManager: NSObject {
@@ -39,7 +37,6 @@ class AuthenticationManager: NSObject {
                 Crashlytics.sharedInstance().setUserIdentifier(newUserId)
                 Crashlytics.sharedInstance().setUserName(newUserId)
                 Amplitude.instance().setUserId(newUserId)
-                Instabug.setUserAttribute(newUserId ?? "", withKey: "userID")
             }
         }
     }
@@ -69,12 +66,8 @@ class AuthenticationManager: NSObject {
     
     @objc
     func hasAuthentication() -> Bool {
-        if UserDefaults.standard.bool(forKey: "FASTLANE_SNAPSHOT") {
-            //If in snapshot mode it should always start fresh on launch
-            return false
-        }
         if let userId = self.currentUserId {
-            return userId.count > 0
+            return userId.isEmpty == false
         }
         return false
     }

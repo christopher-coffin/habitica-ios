@@ -55,7 +55,7 @@ class TaskFormViewController: FormViewController {
             if tableView != nil {
                 tableView.reloadData()
             }
-            modalContainerViewController?.screenDimView.backgroundColor = taskTintColor.darker(by: 50)?.withAlphaComponent(0.6)
+            modalContainerViewController?.screenDimView.backgroundColor = taskTintColor.darker(by: 50).withAlphaComponent(0.6)
         }
     }
     var lightTaskTintColor: UIColor = UIColor.purple400()
@@ -119,8 +119,10 @@ class TaskFormViewController: FormViewController {
                     row.value = self.task.tags.contains(where: { (taskTag) -> Bool in
                         return taskTag.id == tag.id
                     })
-                    row.cellSetup({ (cell, _) in
+                    row.cellUpdate({ (cell, _) in
                         cell.tintColor = self.taskTintColor
+                        cell.textLabel?.textColor = ThemeService.shared.theme.primaryTextColor
+                        cell.detailTextLabel?.textColor = ThemeService.shared.theme.primaryTextColor
                     })
                 }
                 section.append(row)
@@ -175,7 +177,7 @@ class TaskFormViewController: FormViewController {
         
         modalContainerViewController?.onRightButtonTapped = {
             let errors = self.form.validate()
-            if errors.count == 0 {
+            if errors.isEmpty {
                 self.save()
                 self.modalContainerViewController?.dismiss()
             }
@@ -280,6 +282,7 @@ class TaskFormViewController: FormViewController {
                 row.options = TaskFormViewController.habitResetStreakOptions
                 row.value = TaskFormViewController.habitResetStreakOptions[0]
                 row.cellSetup({ (cell, _) in
+                    cell.tintColor = self.taskTintColor
                     cell.segmentedControl.tintColor = self.taskTintColor
                 })
             }
@@ -495,10 +498,10 @@ class TaskFormViewController: FormViewController {
             TaskFormTags.dailyEvery: task.everyX,
             TaskFormTags.repeatWeekdays: weekRepeat
             ])
-        if task.daysOfMonth.count != 0 {
+        if task.daysOfMonth.isEmpty == false {
             form.setValues([TaskFormTags.repeatMonthlySegment: L10n.Tasks.Form.dayOfMonth])
         }
-        if task.weeksOfMonth.count != 0 {
+        if task.weeksOfMonth.isEmpty == false {
             form.setValues([TaskFormTags.repeatMonthlySegment: L10n.Tasks.Form.dayOfWeek])
         }
         fillChecklistValues()

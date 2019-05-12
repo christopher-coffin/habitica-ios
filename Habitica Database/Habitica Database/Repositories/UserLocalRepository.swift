@@ -9,10 +9,12 @@
 import Foundation
 import Habitica_Models
 import ReactiveSwift
+import RealmSwift
 
 public class UserLocalRepository: BaseLocalRepository {
     public func save(_ user: UserProtocol) {
         removeOldTags(userID: user.id, newTags: user.tags)
+        removeOldMemberships(userID: user.id, newChallengeMemberships: user.challenges)
         if let realmUser = user as? RealmUser {
             save(object: realmUser)
             return
@@ -22,16 +24,16 @@ public class UserLocalRepository: BaseLocalRepository {
     
     public func save(_ userId: String, stats: StatsProtocol) {
         RealmUser.findBy(key: userId).take(first: 1).on(value: {[weak self] user in
-            try? self?.getRealm()?.write {
+            self?.updateCall { realm in
                 let realmStats = RealmStats(id: userId, stats: stats)
-                self?.getRealm()?.add(realmStats, update: true)
+                realm.add(realmStats, update: true)
                 user?.stats = realmStats
             }
         }).start()
     }
     
     public func save(userID: String?, inAppRewards: [InAppRewardProtocol]) {
-        save(objects:inAppRewards.map { (inAppReward) in
+        save(objects: inAppRewards.map { (inAppReward) in
             if let realmInAppReward = inAppReward as? RealmInAppReward {
                 return realmInAppReward
             }
@@ -41,7 +43,7 @@ public class UserLocalRepository: BaseLocalRepository {
     }
     
     public func save(userID: String, messages: [InboxMessageProtocol]) {
-        save(objects:messages.map { (messsage) in
+        save(objects: messages.map { (messsage) in
             if let realmInboxMessage = messsage as? RealmInboxMessage {
                 return realmInboxMessage
             }
@@ -59,10 +61,9 @@ public class UserLocalRepository: BaseLocalRepository {
                 rewardsToRemove.append(reward)
             }
         })
-        if rewardsToRemove.count > 0 {
-            let realm = getRealm()
-            try? realm?.write {
-                realm?.delete(rewardsToRemove)
+        if rewardsToRemove.isEmpty == false {
+            updateCall { realm in
+                realm.delete(rewardsToRemove)
             }
         }
     }
@@ -77,16 +78,32 @@ public class UserLocalRepository: BaseLocalRepository {
                 tagsToRemove.append(tag)
             }
         })
-        if tagsToRemove.count > 0 {
-            let realm = getRealm()
-            try? realm?.write {
-                realm?.delete(tagsToRemove)
+        if tagsToRemove.isEmpty == false {
+            updateCall { realm in
+                realm.delete(tagsToRemove)
+            }
+        }
+    }
+    
+    private func removeOldMemberships(userID: String?, newChallengeMemberships: [ChallengeMembershipProtocol]) {
+        let oldChallengeMemberships = getRealm()?.objects(RealmChallengeMembership.self).filter("userID == '\(userID ?? "")'")
+        var membershipsToRemove = [Object]()
+        oldChallengeMemberships?.forEach({ (membership) in
+            if !newChallengeMemberships.contains(where: { (newMembership) -> Bool in
+                return newMembership.challengeID == membership.challengeID
+            }) {
+                membershipsToRemove.append(membership)
+            }
+        })
+        if membershipsToRemove.isEmpty == false {
+            updateCall { realm in
+                realm.delete(membershipsToRemove)
             }
         }
     }
     
     public func getUser(_ id: String) -> SignalProducer<UserProtocol, ReactiveSwiftRealmError> {
-        return RealmUser.findBy(query: "id == '\(id)'").reactive().map({ (users, changes) -> UserProtocol? in
+        return RealmUser.findBy(query: "id == '\(id)'").reactive().map({ (users, _) -> UserProtocol? in
             return users.first
         }).skipNil()
     }
@@ -101,7 +118,7 @@ public class UserLocalRepository: BaseLocalRepository {
             if let oldTask = getRealm()?.object(ofType: RealmTask.self, forPrimaryKey: task.id) {
                 task.order = oldTask.order
             }
-            save(object: RealmTask(userID: userID, taskProtocol: task, tags: tags))
+            save(object: RealmTask(ownerID: userID, taskProtocol: task, tags: tags))
         }
         if let newUser = skillResponse.user {
             save(newUser)
@@ -110,7 +127,7 @@ public class UserLocalRepository: BaseLocalRepository {
     
     public func toggleSleep(_ userID: String) {
         if let user = getRealm()?.object(ofType: RealmUser.self, forPrimaryKey: userID) {
-            try? getRealm()?.write {
+            updateCall { _ in
                 user.preferences?.sleep = !(user.preferences?.sleep ?? false)
             }
         }
@@ -118,8 +135,8 @@ public class UserLocalRepository: BaseLocalRepository {
     
     public func updateUser(id: String, balanceDiff: Float) {
         if let user = getRealm()?.object(ofType: RealmUser.self, forPrimaryKey: id) {
-            try? getRealm()?.write {
-                user.balance = user.balance + balanceDiff
+            updateCall { _ in
+                user.balance += balanceDiff
             }
         }
     }
@@ -131,16 +148,15 @@ public class UserLocalRepository: BaseLocalRepository {
     }
     
     public func updateUser(id: String, userItems: UserItemsProtocol) {
-        let realm = getRealm()
-        try? realm?.write {
-            realm?.add(RealmUserItems(id: id, userItems: userItems), update: true)
+        updateCall { realm in
+            realm.add(RealmUserItems(id: id, userItems: userItems), update: true)
         }
     }
     
     public func updateUser(id: String, price: Int, buyResponse: BuyResponseProtocol) {
         let realm = getRealm()
         if let existingUser = realm?.object(ofType: RealmUser.self, forPrimaryKey: id) {
-            try? realm?.write {
+            updateCall { _ in
                 if let stats = existingUser.stats {
                     stats.health = buyResponse.health ?? stats.health
                     stats.experience = buyResponse.experience ?? stats.experience
@@ -194,13 +210,21 @@ public class UserLocalRepository: BaseLocalRepository {
     }
     
     public func usedTransformationItem(userID: String, key: String) {
-        guard let realm = getRealm() else {
-            return
-        }
-        let ownedItem = realm.object(ofType: RealmOwnedItem.self, forPrimaryKey: "\(userID)\(key)special")
-        try? realm.write {
+        let realm = getRealm()
+        let ownedItem = realm?.object(ofType: RealmOwnedItem.self, forPrimaryKey: "\(userID)\(key)special")
+        updateCall { _ in
             ownedItem?.numberOwned -= 1
         }
+    }
+    
+    public func getNotifications(userID: String) -> SignalProducer<ReactiveResults<[NotificationProtocol]>, ReactiveSwiftRealmError> {
+        return RealmNotification.findBy(query: "userID == '\(userID)'").sorted(key: "priority").reactive().map({ (value, changeset) -> ReactiveResults<[NotificationProtocol]> in
+            return (value.map({ (notification) -> NotificationProtocol in return notification }), changeset)
+        })
+    }
+    
+    public func createNotification(userID: String, id: String, type: HabiticaNotificationType) -> NotificationProtocol {
+        return RealmNotification(id, userID: userID, type: type)
     }
     
     private func outfitFor(class habiticaClass: HabiticaClass) -> OutfitProtocol {
@@ -230,10 +254,7 @@ public class UserLocalRepository: BaseLocalRepository {
     }
     
     private func mergeUsers(oldUser: UserProtocol, newUser: UserProtocol) {
-        guard let realm = getRealm() else {
-            return
-        }
-        try? realm.write {
+        updateCall { realm in
             if newUser.balance >= 0 {
                 oldUser.balance = newUser.balance
             }
