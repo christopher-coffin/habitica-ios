@@ -31,6 +31,7 @@ class AuthenticationManager: NSObject {
                 localKeychain["currentUserId"] = cuid
                 return cuid
             }
+            print("getting uid", cuid)
             return cuid
         }
         
@@ -52,6 +53,7 @@ class AuthenticationManager: NSObject {
     @objc var currentUserKey: String? {
         get {
             if let userId = self.currentUserId {
+                print("getting key uid", userId, keychain[userId])
                 return keychain[userId]
             }
             return nil
