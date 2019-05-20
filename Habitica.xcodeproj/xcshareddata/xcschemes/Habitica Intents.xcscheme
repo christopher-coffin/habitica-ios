@@ -58,7 +58,7 @@
    </TestAction>
    <LaunchAction
       buildConfiguration = "Debug"
-      intentQueryString = "Add have fun to my todo list in Habitica"
+      intentQueryString = "Add buy air guitar and sell waterless bagpipe to todo on habitica"
       selectedDebuggerIdentifier = ""
       selectedLauncherIdentifier = "Xcode.IDEFoundation.Launcher.PosixSpawn"
       launchStyle = "0"
@@ -93,7 +93,7 @@
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"
-      intentQueryString = "Add have fun to my todo list in Habitica"
+      intentQueryString = "Add buy air guitar and sell waterless bagpipe to todo on habitica"
       shouldUseLaunchSchemeArgsEnv = "YES"
       savedToolIdentifier = ""
       useCustomWorkingDirectory = "NO"
